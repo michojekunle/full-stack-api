@@ -44,17 +44,18 @@ app.get('/', (req, res) => {
 //Sign-In Route
 app.post('/signin', (req, res) => {
 
-    // Load hash from your password DB.
-    bcrypt.compare("michpassword", "$2a$10$MnKXLhRqxlyFK/434zK12.4ifsz3bzYmFOiHArnxAR4Ih74gqdATS", function(err, res) {
-        console.log("response 1:", res);
-    });
+    // // Load hash from your password DB.
+    // bcrypt.compare("michpassword", "$2a$10$MnKXLhRqxlyFK/434zK12.4ifsz3bzYmFOiHArnxAR4Ih74gqdATS", function(err, res) {
+    //     console.log("response 1:", res);
+    // });
 
-    bcrypt.compare("agooo", "$2a$10$MnKXLhRqxlyFK/434zK12.4ifsz3bzYmFOiHArnxAR4Ih74gqdATS", function(err, res) {
-        console.log("response 2:", res);
-    });
+    // bcrypt.compare("agooo", "$2a$10$MnKXLhRqxlyFK/434zK12.4ifsz3bzYmFOiHArnxAR4Ih74gqdATS", function(err, res) {
+    //     console.log("response 2:", res);
+    // });
+
 
     if(req.body.email === database.users[1].email && req.body.password === database.users[1].password) {
-        res.json('SUCCESS')
+        res.json(database.users[1])
     } else {
         res.status(400).json('Error 400 bad request signing in.')
     }
@@ -72,7 +73,6 @@ app.post('/register', (req, res) => {
         id: '95',
         name: name,
         email:email, 
-        password: password,
         entries:0,
         joined: new Date()      
     });
