@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcrypt-nodejs');
 const cors = require('cors');
+const knex = require('knex');
 
 const app = express();
 
@@ -35,6 +36,19 @@ const database = {
         },
     ]
 }
+
+const db = knex({
+    client: 'pg',
+    version: '7.2',
+    connection: {
+      host : '127.0.0.1',
+      port : 5432,
+      user : 'postgres',
+      password: 'postgresql@1.0',
+      database : 'users'
+    }
+  });
+
 
 //root route
 app.get('/', (req, res) => {
