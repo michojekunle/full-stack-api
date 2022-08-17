@@ -39,17 +39,16 @@ const database = {
 
 const db = knex({
     client: 'pg',
-    version: '7.2',
     connection: {
       host : '127.0.0.1',
       port : 5432,
       user : 'postgres',
       password: 'postgresql@1.0',
-      database : 'users'
+      database : 'full-stack'
     }
   });
 
-
+db.select('*').from('users').then(users => { console.log(users) })
 //root route
 app.get('/', (req, res) => {
     res.send(database.users);
@@ -91,7 +90,13 @@ app.post('/register', (req, res) => {
         joined: new Date()      
     });
 
-    res.json(database.users[database.users.length - 1])
+    db('users').returning('*').insert({
+        name: name,
+        email: email,
+        joined: new Date()
+    }).then(users => { res.json(users[0])});
+    
+
 });
 
 //Profile Route
