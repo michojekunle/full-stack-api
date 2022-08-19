@@ -9,34 +9,6 @@ app.use(express.json())
 app.use(cors());
 
 //database 
-const database = {
-    users: [
-        {
-            id: '12',
-            name: 'Nnesoma',
-            email:'rocks@gmail.com', 
-            password:'cassava',
-            entries:0,
-            joined: new Date(),
-        },
-        {
-            id: '39',
-            name: 'Nnesomerema',
-            email:'ewa@gmail.com', 
-            password:'agbado',
-            entries:0,
-            joined: new Date(),
-        }, 
-    ],
-    login: [
-        {
-            id: "18",
-            hash: "",
-            email: "michael@gmail.com",
-        },
-    ]
-}
-
 const db = knex({
     client: 'pg',
     connection: {
@@ -51,98 +23,88 @@ const db = knex({
 db.select('*').from('users').then(users => { console.log(users) })
 //root route
 app.get('/', (req, res) => {
-    res.send(database.users);
+    db.select('*').from('users').then(users => res.json(users))
 })
 
 //Sign-In Route
 app.post('/signin', (req, res) => {
-
-    // // Load hash from your password DB.
-    // bcrypt.compare("michpassword", "$2a$10$MnKXLhRqxlyFK/434zK12.4ifsz3bzYmFOiHArnxAR4Ih74gqdATS", function(err, res) {
-    //     console.log("response 1:", res);
-    // });
-
-    // bcrypt.compare("agooo", "$2a$10$MnKXLhRqxlyFK/434zK12.4ifsz3bzYmFOiHArnxAR4Ih74gqdATS", function(err, res) {
-    //     console.log("response 2:", res);
-    // });
-
-
-    if(req.body.email === database.users[1].email && req.body.password === database.users[1].password) {
-        res.json(database.users[1])
-    } else {
-        res.status(400).json('Error 400 bad request signing in.')
-    }
-})
+    const { password } = req.body;
+    db.select("email", "hash")
+        .from("login")
+        .where("email", "=", req.body.email)
+        .then(data => {
+            console.log(data[0])
+            const isValid = bcrypt.compareSync(req.body.password, data[0].hash);
+            console.log(isValid);
+            if (isValid) {
+                return db
+                .select("*")
+                .from("users")
+                .where("email", "=", req.body.email)
+                .then((users) => {
+                    res.json(users[0]);
+                })
+                .catch((err) => res.status(400).json("unable to get user"));
+            } else {
+                res.status(400).json("1 wrong credentials");
+            }
+        })
+        .catch((err) => res.status(400).json("2 wrong credentials"));
+});
 
 //Regiter route 
 app.post('/register', (req, res) => {
     const { name, email, password} = req.body;
+    const hash = bcrypt.hashSync(password);
     
-    bcrypt.hash(password, null, null, function(err, hash) {
-        console.log(hash);
-    });
-    
-    database.users.push({
-        id: '95',
-        name: name,
-        email:email, 
-        entries:0,
-        joined: new Date()      
-    });
-
-    db('users').returning('*').insert({
-        name: name,
-        email: email,
-        joined: new Date()
-    }).then(users => { res.json(users[0])});
-    
-
+    db.transaction((trx) => {
+        trx.insert({
+            hash: hash,
+            email: email
+        }).into('login').returning('email').then(loginEmail => {
+           return trx('users').returning('*').insert({
+                    name: name,
+                    email: loginEmail[0].email,
+                    joined: new Date()
+                })
+                .then(users => {
+                        res.json(users[0])
+                })
+            })
+                .then(trx.commit)
+                    .catch(trx.rollback);
+        }).catch(err => { res.status(400).json("unable to register")})
 });
 
 //Profile Route
 app.get('/profile/:id', (req, res) => {
     const { id } = req.params;
-    let found = false;
 
-    database.users.forEach(user => {
-        if(user.id === id) {
-            found = true;
-            return res.json(user)
-        }
+    db.select('*')
+    .from('users')
+    .where({
+        id: id
     })
-
-    if(!found) {
-        res.status(404).json("Not found!!")
-    }
+    .then(users => {
+        console.log(users[0])
+        res.json(users[0])
+    })
 })
 
 
 //link route
 app.put('/link', (req, res) => {
     const { id } = req.body;
-    let found = false;
 
-    database.users.forEach(user => {
-        if(user.id === id) {
-            found = true;
-            user.entries++;
-            return res.json(user.entries)
-        }
-    })
-
-    if(!found) {
-        res.status(404).json("Not found!!")
-    }
+    db('users').where("id", "=", id)
+    .increment("entries", 1)
+    .returning("entries")
+    .then((entries) => res.json(entries[0].entries))
+    .catch((err) => res.status(400).json("cannot get entries"))
 })
 
 
 
 app.listen('3002', () => {
     console.log('The API is running on port 3002');
-})
-
-
-
-// bcrypt.compare("veggies", hash, function(err, res) {
-//     // res = false
-// });
+});
